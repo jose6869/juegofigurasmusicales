@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Juego: Figuras Musicales</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(to right, #000000, #434343);
+      margin: 0;
+      padding: 0;
+    }
+    .background-image {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      opacity: 0.7;
+      background-image: url('img/fondo.png');
+      background-repeat: no-repeat;
+      background-size: cover;
+      background-position: center;
+    }
+    .quiz-container {
+      background: rgba(30, 30, 30, 0.95);
+      color: #f0f0f0;
+      padding: 30px;
+      border-radius: 20px;
+      box-shadow: 0 8px 24px rgba(255, 255, 255, 0.1);
+      text-align: center;
+      max-width: 600px;
+      width: 90%;
+      margin: 5% auto;
+    }
+    .question {
+      font-size: 1.4em;
+      margin-bottom: 20px;
+      font-weight: bold;
+    }
+    .options button {
+      display: block;
+      width: 100%;
+      margin: 10px 0;
+      padding: 14px;
+      font-size: 1em;
+      border-radius: 10px;
+      border: none;
+      background-color: #2c2c2c;
+      color: #ffffff;
+      cursor: pointer;
+      transition: all 0.2s ease-in-out;
+    }
+    .options button:hover {
+      background-color: #4a148c;
+      transform: scale(1.05);
+    }
+    .options button.correct {
+      background-color: #388e3c !important;
+    }
+    .options button.incorrect {
+      background-color: #c62828 !important;
+    }
+    .feedback {
+      margin-top: 15px;
+      font-weight: bold;
+    }
+    .score {
+      margin-top: 10px;
+      font-size: 1em;
+      color: #bbbbbb;
+    }
+    .level-selection {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .level-selection button {
+      margin: 10px;
+      padding: 12px 24px;
+      font-size: 1em;
+      background-color: #444;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .level-selection button:hover {
+      background-color: #6a1b9a;
+    }
+    .figura-img {
+      max-width: 80px;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="background-image"></div>
+  <div class="quiz-container">
+    <div id="pantalla-inicio" class="level-selection">
+      <h2>Selecciona el nivel de dificultad</h2>
+      <button onclick="comenzarJuego(1)">Nivel 1: Figuras individuales</button>
+      <button onclick="comenzarJuego(2)">Nivel 2: Suma de dos figuras</button>
+      <button onclick="comenzarJuego(3)">Nivel 3: Suma de tres figuras</button>
+    </div>
+    <div id="pantalla-juego" style="display:none">
+      <div class="question" id="question"></div>
+      <div id="imagen-figuras"></div>
+      <div class="options" id="options"></div>
+      <div class="feedback" id="feedback"></div>
+      <div class="score" id="score"></div>
+    </div>
+  </div>
+  <script>
+    const figuras = [
+      { nombre: "Redonda", valor: 4, img: "img/redonda.png" },
+      { nombre: "Blanca", valor: 2, img: "img/blanca.png" },
+      { nombre: "Negra", valor: 1, img: "img/negra.png" },
+      { nombre: "Corchea", valor: 0.5, img: "img/corchea.png" },
+      { nombre: "Semicorchea", valor: 0.25, img: "img/semicorchea.png" }
+    ];
+
+    let nivel = 1;
+    let preguntaActual = 0;
+    const totalPreguntasPorNivel = 10;
+    let puntuacion = 0;
+
+    function comenzarJuego(nivelSeleccionado) {
+      nivel = nivelSeleccionado;
+      preguntaActual = 0;
+      puntuacion = 0;
+      document.getElementById("pantalla-inicio").style.display = "none";
+      document.getElementById("pantalla-juego").style.display = "block";
+      nuevaPregunta();
+    }
+
+    function nuevaPregunta() {
+      if (preguntaActual >= totalPreguntasPorNivel) {
+        mostrarResultadoFinal();
+        return;
+      }
+      preguntaActual++;
+
+      let seleccionadas = [];
+      let textoPregunta = "";
+      let valorCorrecto = 0;
+
+      const numFiguras = nivel;
+      for (let i = 0; i < numFiguras; i++) {
+        seleccionadas.push(figuras[Math.floor(Math.random() * figuras.length)]);
+      }
+
+      textoPregunta = nivel === 1
+        ? `Pregunta ${preguntaActual}: ¿Cuál es el valor de la figura musical "${seleccionadas[0].nombre}"?`
+        : `Pregunta ${preguntaActual}: ¿Cuál es la suma de las siguientes figuras musicales: ${seleccionadas.map(f => f.nombre).join(" + ")}?`;
+
+      valorCorrecto = seleccionadas.reduce((acc, f) => acc + f.valor, 0);
+      document.getElementById("question").innerText = textoPregunta;
+      mostrarImagenes(seleccionadas);
+
+      const opciones = generarOpciones(valorCorrecto);
+      const contenedorOpciones = document.getElementById("options");
+      contenedorOpciones.innerHTML = "";
+      document.getElementById("feedback").innerText = "";
+
+      opciones.forEach(valor => {
+        const btn = document.createElement("button");
+        btn.innerText = valor;
+        btn.onclick = () => verificarRespuesta(btn, parseFloat(valor), valorCorrecto);
+        contenedorOpciones.appendChild(btn);
+      });
+    }
+
+    function mostrarImagenes(figurasArr) {
+      const contenedor = document.getElementById("imagen-figuras");
+      contenedor.innerHTML = "";
+      figurasArr.forEach(f => {
+        const img = document.createElement("img");
+        img.src = f.img;
+        img.className = "figura-img";
+        contenedor.appendChild(img);
+      });
+    }
+
+    function generarOpciones(respuestaCorrecta) {
+      const opciones = new Set();
+      opciones.add(parseFloat(respuestaCorrecta.toFixed(2)));
+      while (opciones.size < 4) {
+        let val = 0;
+        for (let i = 0; i < nivel; i++) {
+          val += figuras[Math.floor(Math.random() * figuras.length)].valor;
+        }
+        opciones.add(parseFloat(val.toFixed(2)));
+      }
+      return Array.from(opciones).sort(() => Math.random() - 0.5);
+    }
+
+    function verificarRespuesta(btn, valorSeleccionado, valorCorrecto) {
+      const botones = document.querySelectorAll(".options button");
+      botones.forEach(b => b.disabled = true);
+      if (Math.abs(valorSeleccionado - valorCorrecto) < 0.01) {
+        btn.classList.add("correct");
+        document.getElementById("feedback").innerText = "¡Correcto!";
+        document.getElementById("feedback").style.color = "#66bb6a";
+        puntuacion++;
+      } else {
+        btn.classList.add("incorrect");
+        document.getElementById("feedback").innerText = `Incorrecto. La respuesta correcta era ${valorCorrecto}`;
+        document.getElementById("feedback").style.color = "#ef5350";
+        botones.forEach(b => {
+          if (Math.abs(parseFloat(b.innerText) - valorCorrecto) < 0.01) {
+            b.classList.add("correct");
+          }
+        });
+      }
+      document.getElementById("score").innerText = `Puntuación: ${puntuacion}/${totalPreguntasPorNivel}`;
+      setTimeout(nuevaPregunta, 2500);
+    }
+
+    function mostrarResultadoFinal() {
+      document.getElementById("question").innerText = "¡Juego terminado!";
+      document.getElementById("imagen-figuras").innerHTML = "";
+      document.getElementById("options").innerHTML = "";
+      document.getElementById("feedback").innerText = "";
+      document.getElementById("score").innerText = `Puntuación final: ${puntuacion} de ${totalPreguntasPorNivel}`;
+    }
+  </script>
+</body>
+</html>
